@@ -80,6 +80,15 @@ class TestUUID < MiniTest::Unit::TestCase
     assert_equal 'invalid UUID format :unknown', e.message
 
   end
+  
+  def test_historic_timestamp_generation
+    uuid=UUID.new
+    u1=uuid.generate(format: :compact)
+    u2=uuid.generate(timestamp: Time.at(0))
+    u3=uuid.generate(timestamp: Time.now+1)
+    assert (u2<u1)
+    assert (u3>u1)
+  end
 
   def test_instance_generate
     uuid = UUID.new
