@@ -123,9 +123,9 @@ class UUID
   # Generates a new UUID string using +format+.  See FORMATS for a list of
   # supported formats.
 
-  def self.generate(format = :default)
+  def self.generate(format: :default, timestamp: Time.new)
     @uuid ||= new
-    @uuid.generate format
+    @uuid.generate(format: format, timestamp: timestamp)
   end
 
   ##
@@ -280,7 +280,7 @@ class UUID
   ##
   # Generates a new UUID string using +format+.  See FORMATS for a list of
   # supported formats.
-  def generate(format = :default)
+  def generate(format: :default, timestamp: Time.new)
     template = FORMATS[format]
 
     raise ArgumentError, "invalid UUID format #{format.inspect}" unless template
@@ -296,7 +296,7 @@ class UUID
     # with the new clock.
 
     clock = @mutex.synchronize do
-      clock = (Time.new.to_f * CLOCK_MULTIPLIER).to_i & 0xFFFFFFFFFFFFFFF0
+      clock = (timestamp.to_f * CLOCK_MULTIPLIER).to_i & 0xFFFFFFFFFFFFFFF0
 
       if clock > @last_clock then
         @drift = 0

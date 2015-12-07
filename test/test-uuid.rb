@@ -4,12 +4,13 @@
 # Copyright:: Copyright (c) 2005-2008 Assaf Arkin, Eric Hodel
 # License:: MIT and/or Creative Commons Attribution-ShareAlike
 
-require 'test/unit'
+require 'minitest/autorun'
+require 'minitest/mock'
 require 'rubygems'
-require 'uuid'
-require 'mocha'
+require 'pry'
+require_relative '../lib/uuid'
 
-class TestUUID < Test::Unit::TestCase
+class TestUUID < MiniTest::Unit::TestCase
 
   def test_state_file_creation
     path = UUID.state_file
@@ -35,6 +36,8 @@ class TestUUID < Test::Unit::TestCase
     path = File.join("path", "to", "ruby-uuid")
     UUID.state_file = path
     assert_equal path, UUID.state_file
+  ensure
+    UUID.state_file=nil #ensure state_path is reset
   end
 
   def test_mode_is_set_on_state_file_specify
@@ -56,23 +59,23 @@ class TestUUID < Test::Unit::TestCase
     UUID.state_file = false
     assert !UUID.state_file
     uuid = UUID.new
-    assert_match(/\A[\da-f]{32}\z/i, uuid.generate(:compact))
+    assert_match(/\A[\da-f]{32}\z/i, uuid.generate(format: :compact))
     seq = uuid.next_sequence
     assert_equal seq + 1, uuid.next_sequence
     assert !UUID.state_file
   end
 
   def validate_uuid_generator(uuid)
-    assert_match(/\A[\da-f]{32}\z/i, uuid.generate(:compact))
+    assert_match(/\A[\da-f]{32}\z/i, uuid.generate(format: :compact))
 
     assert_match(/\A[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}\z/i,
-                 uuid.generate(:default))
+                 uuid.generate(format: :default))
 
     assert_match(/^urn:uuid:[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}\z/i,
-                 uuid.generate(:urn))
+                 uuid.generate(format: :urn))
 
-    e = assert_raise ArgumentError do
-      uuid.generate :unknown
+    e = assert_raises ArgumentError do
+      uuid.generate(format: :unknown)
     end
     assert_equal 'invalid UUID format :unknown', e.message
 
@@ -84,16 +87,16 @@ class TestUUID < Test::Unit::TestCase
   end
 
   def test_class_generate
-    assert_match(/\A[\da-f]{32}\z/i, UUID.generate(:compact))
+    assert_match(/\A[\da-f]{32}\z/i, UUID.generate(format: :compact))
 
     assert_match(/\A[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}\z/i,
-                 UUID.generate(:default))
+                 UUID.generate(format: :default))
 
     assert_match(/^urn:uuid:[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}\z/i,
-                 UUID.generate(:urn))
+                 UUID.generate(format: :urn))
 
-    e = assert_raise ArgumentError do
-      UUID.generate :unknown
+    e = assert_raises ArgumentError do
+      UUID.generate(format: :unknown)
     end
     assert_equal 'invalid UUID format :unknown', e.message
   end
@@ -145,12 +148,13 @@ class TestUUID < Test::Unit::TestCase
 
   def test_pseudo_random_mac_address
     uuid_gen = UUID.new
-    Mac.stubs(:addr).returns "00:00:00:00:00:00"
-    assert uuid_gen.iee_mac_address == 0
-    [:compact, :default, :urn].each do |format|
-      assert UUID.validate(uuid_gen.generate(format)), format.to_s
+    Mac.stub(:addr, "00:00:00:00:00:00") do
+      assert uuid_gen.iee_mac_address == 0
+      [:compact, :default, :urn].each do |format|
+        assert UUID.validate(uuid_gen.generate(format: format)), format.to_s
+      end
+      validate_uuid_generator(uuid_gen)
     end
-    validate_uuid_generator(uuid_gen)
   end
 
 end
